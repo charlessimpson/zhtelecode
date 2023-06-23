@@ -72,46 +72,59 @@ def to_telecode(unicode, encoding=None):
     >>> to_telecode("萼", encoding="taiwan")
     ['5501']
     """
-    codes = []
     if not encoding:
-        for char in unicode:
-            try:
-                cnindex = _MAINLAND_CODEBOOK.index(char)
-            except ValueError:
-                cnindex = 0
-
-            try:
-                twindex = _TAIWAN_CODEBOOK.index(char)
-            except ValueError:
-                twindex = 0
-
-            if cnindex and twindex:
-                if cnindex == twindex:
-                    codes.append(cnindex)
-                else:
-                    raise LookupError(f'ambiguous encoding for "{char}" (U+{(ord(char)):04X})')
-            elif cnindex:
-                codes.append(cnindex)
-            elif twindex:
-                codes.append(twindex)
-            else:
-                raise LookupError(f'undefined encoding for "{char}" (U+{(ord(char)):04X})')
+        codes = __to_telecode_combined(unicode)
     elif encoding.lower() == "mainland":
-        for char in unicode:
-            try:
-                codes.append(_MAINLAND_CODEBOOK.index(char))
-            except ValueError as err:
-                raise LookupError(f'undefined encoding for "{char}" (U+{(ord(char)):04X})') from err
+        codes = __to_telecode_single(unicode, _MAINLAND_CODEBOOK)
     elif encoding.lower() == "taiwan":
-        for char in unicode:
-            try:
-                codes.append(_TAIWAN_CODEBOOK.index(char))
-            except ValueError as err:
-                raise LookupError(f'undefined encoding for "{char}" (U+{(ord(char)):04X})') from err
+        codes = __to_telecode_single(unicode, _TAIWAN_CODEBOOK)
     else:
         raise NotImplementedError('undefined encoding type "encoding"')
 
     return [str(c).zfill(4) for c in codes]
+
+
+def __to_telecode_single(unicode, codebook):
+    """Encode unicode to telecode using either mainland or Taiwan codebooks.
+    """
+    codes = []
+    for char in unicode:
+        try:
+            codes.append(codebook.index(char))
+        except ValueError as err:
+            raise LookupError(f'undefined encoding for "{char}" (U+{(ord(char)):04X})') from err
+
+    return codes
+
+
+def __to_telecode_combined(unicode):
+    """Encode unicode to telecode using both mainland and Taiwan codebooks.
+    """
+    codes = []
+    for char in unicode:
+        try:
+            cnindex = _MAINLAND_CODEBOOK.index(char)
+        except ValueError:
+            cnindex = 0
+
+        try:
+            twindex = _TAIWAN_CODEBOOK.index(char)
+        except ValueError:
+            twindex = 0
+
+        if cnindex and twindex:
+            if cnindex == twindex:
+                codes.append(cnindex)
+            else:
+                raise LookupError(f'ambiguous encoding for "{char}" (U+{(ord(char)):04X})')
+        elif cnindex:
+            codes.append(cnindex)
+        elif twindex:
+            codes.append(twindex)
+        else:
+            raise LookupError(f'undefined encoding for "{char}" (U+{(ord(char)):04X})')
+
+    return codes
 
 
 def to_unicode(telecode, encoding=None):
@@ -172,39 +185,51 @@ def to_unicode(telecode, encoding=None):
     >>> to_unicode(['5501'], encoding="mainland")
     '萼'
     """
-    chars = []
     if not encoding:
-        for code in telecode:
-            cnchar = _MAINLAND_CODEBOOK[int(code)]
-            twchar = _TAIWAN_CODEBOOK[int(code)]
-            if cnchar == twchar:
-                if cnchar.isspace() and twchar.isspace():
-                    raise LookupError(f'undefined decoding for "{code}"')
-                chars.append(cnchar)
-            elif cnchar.isspace():
-                chars.append(twchar)
-            elif twchar.isspace():
-                chars.append(cnchar)
-            else:
-                raise LookupError(f'ambiguous decoding for "{code}"')
+        chars = __to_unicode_combined(telecode)
     elif encoding.lower() == "mainland":
-        for code in telecode:
-            char = _MAINLAND_CODEBOOK[int(code)]
-            if char.isspace():
-                raise LookupError(f'undefined decoding for "{code}"')
-
-            chars.append(char)
+        chars = __to_unicode_single(telecode, _MAINLAND_CODEBOOK)
     elif encoding.lower() == "taiwan":
-        for code in telecode:
-            char = _TAIWAN_CODEBOOK[int(code)]
-            if char.isspace():
-                raise LookupError(f'undefined decoding for "{code}"')
-
-            chars.append(char)
+        chars = __to_unicode_single(telecode, _TAIWAN_CODEBOOK)
     else:
         raise NotImplementedError('undefined encoding type "encoding"')
 
     return "".join(chars)
+
+
+def __to_unicode_single(telecode, codebook):
+    """Decode telecode to unicode using either mainland or Taiwan codebooks.
+    """
+    chars = []
+    for code in telecode:
+        char = codebook[int(code)]
+        if char.isspace():
+            raise LookupError(f'undefined decoding for "{code}"')
+
+        chars.append(char)
+
+    return chars
+
+
+def __to_unicode_combined(telecode):
+    """Decode telecode to unicode using both mainland and Taiwan codebooks.
+    """
+    chars = []
+    for code in telecode:
+        cnchar = _MAINLAND_CODEBOOK[int(code)]
+        twchar = _TAIWAN_CODEBOOK[int(code)]
+        if cnchar == twchar:
+            if cnchar.isspace() and twchar.isspace():
+                raise LookupError(f'undefined decoding for "{code}"')
+            chars.append(cnchar)
+        elif cnchar.isspace():
+            chars.append(twchar)
+        elif twchar.isspace():
+            chars.append(cnchar)
+        else:
+            raise LookupError(f'ambiguous decoding for "{code}"')
+
+    return chars
 
 
 def load_unihan_data(file):
