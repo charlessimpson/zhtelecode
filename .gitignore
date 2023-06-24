@@ -1,7 +1,12 @@
 __pycache__/
+
 .env/
 .venv/
 env/
 venv/
+
+build/
+dist/
+*.egg-info/
 
 [._]sw[a-p]

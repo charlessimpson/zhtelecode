@@ -7,6 +7,9 @@ The codebooks are derived from the Unicode consortium's Unihan database:
 <https://www.unicode.org/Public/UNIDATA/Unihan.zip>.
 """
 
+__version__ = "0.1.0"
+__author__ = "Charles Simpson"
+
 # TODO use dict lookups instead of searching through the codebook string
 
 from io import TextIOWrapper
